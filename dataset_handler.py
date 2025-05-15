@@ -2,9 +2,10 @@ import os
 import pandas as pd
 
 class DatasetHandler:
-    def __init__(self, file_name: str, expected_columns: list = None):
+    def __init__(self, file_name: str, expected_columns: list = None, expected_types: dict = None):
         self.file_name = file_name
         self.expected_columns = expected_columns
+        self.expected_dtypes = expected_types if expected_types is not None else {}
         self.dataset = None
 
     def check_file_exists(self):
@@ -33,6 +34,27 @@ class DatasetHandler:
                 f'Ожидаемые: {self.expected_columns}\n'
                 f'Фактическе: {list(self.dataset.columns)}.')
     
+    def check_column_types(self):
+        """Проверяет соответствие типов данных в колонках."""
+        if not self.expected_dtypes:
+            return
+
+        type_errors = []
+        
+        for col, expected_type in self.expected_dtypes.items():
+            if col not in self.dataset.columns:
+                continue
+                
+            actual_type = self.dataset[col].dtype
+            if not pd.api.types.is_dtype_equal(actual_type, expected_type):
+                type_errors.append(
+                    f"В столбце '{col}' тип данных не соответствует ожидаемому. "
+                    f"Ожидается: {expected_type}, Фактически: {actual_type}"
+                )
+        
+        if type_errors:
+            raise TypeError("\n".join(type_errors))
+        
     def process_dataset(self):
         try: 
             print(f'Попытка обработать файл {self.file_name}.')
@@ -41,10 +63,11 @@ class DatasetHandler:
             self.check_file_not_empty()
             self.load_dataset()
             self.check_columns()
+            self.check_column_types
 
             print(f'Обработка файла {self.file_name} завершена успешно.')
         except Exception as e:
-            print(f'Ошибка: {str(e)}')
+            print(f'{str(e)}')
             return False
         
         return True
